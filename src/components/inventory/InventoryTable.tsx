@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -13,13 +13,14 @@ import type { Server } from "@/types/server";
 import { StatusBadge, PatchedBadge, PriorityBadge } from "./StatusBadge";
 import { InlineText, InlineSelect } from "./InlineEdit";
 import { ServerDetailPanel } from "./ServerDetailPanel";
+import { highlightMatch } from "@/lib/highlight";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 6;
 
 export function InventoryTable() {
-  const { servers, updateServer } = useServerStore();
+  const { servers, updateServer, searchTerm, searchMode } = useServerStore();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [domainFilter, setDomainFilter] = useState<string>("All");
@@ -32,9 +33,32 @@ export function InventoryTable() {
     [servers]
   );
 
+  // Reset to page 1 whenever the global search changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, searchMode]);
+
+  const matchesGlobalSearch = (s: Server): boolean => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    if (searchMode === "status") {
+      const haystacks = [
+        s.status.toLowerCase(),
+        s.isPatched === "Yes" ? "patched" : "unpatched",
+      ];
+      return haystacks.some((h) => h.includes(q));
+    }
+    const fields = [
+      s.serverName, s.domain, s.serialNumber, s.patchContact,
+      s.ipAddress, s.internetFacing, s.sociAsset, s.essential8,
+    ];
+    return fields.some((f) => String(f ?? "").toLowerCase().includes(q));
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return servers.filter((s) => {
+      if (!matchesGlobalSearch(s)) return false;
       if (statusFilter !== "All" && s.status !== statusFilter) return false;
       if (domainFilter !== "All" && s.domain !== domainFilter) return false;
       if (!q) return true;
@@ -46,7 +70,7 @@ export function InventoryTable() {
         s.domain.toLowerCase().includes(q)
       );
     });
-  }, [servers, query, statusFilter, domainFilter]);
+  }, [servers, query, statusFilter, domainFilter, searchTerm, searchMode]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -215,7 +239,9 @@ export function InventoryTable() {
                         value={s.serverName}
                         onSave={(v) => stageEdit(s.id, { serverName: v })}
                         display={(v) => (
-                          <span className="font-mono font-semibold text-foreground">{v}</span>
+                          <span className="font-mono font-semibold text-foreground">
+                            {searchMode === "custom" ? highlightMatch(v, searchTerm) : v}
+                          </span>
                         )}
                       />
                       <p className="text-[11px] text-muted-foreground mt-0.5">{s.model}</p>
@@ -224,6 +250,9 @@ export function InventoryTable() {
                       <InlineText
                         value={s.ipAddress}
                         onSave={(v) => stageEdit(s.id, { ipAddress: v })}
+                        display={(v) => (
+                          <span>{searchMode === "custom" ? highlightMatch(v, searchTerm) : v}</span>
+                        )}
                       />
                     </td>
                     <td className="px-3 py-3 text-xs text-muted-foreground">{s.os}</td>
@@ -242,7 +271,9 @@ export function InventoryTable() {
                     </td>
                     <td className="px-3 py-3"><PatchedBadge patched={s.isPatched} /></td>
                     <td className="px-3 py-3 text-xs text-muted-foreground max-w-[180px] truncate">{s.location}</td>
-                    <td className="px-3 py-3 text-xs font-mono text-muted-foreground">{s.domain}</td>
+                    <td className="px-3 py-3 text-xs font-mono text-muted-foreground">
+                      {searchMode === "custom" ? highlightMatch(s.domain, searchTerm) : s.domain}
+                    </td>
                     <td className="px-3 py-3"><PriorityBadge priority={s.priority} /></td>
                     <td className="px-3 py-3">
                       <button
@@ -273,8 +304,16 @@ export function InventoryTable() {
             })}
             {pageRows.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-3 py-12 text-center text-muted-foreground text-sm">
-                  No servers match your filters.
+                <td colSpan={10} className="px-3 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Search className="w-8 h-8 opacity-40" />
+                    <p className="text-sm font-medium text-foreground">No results found</p>
+                    <p className="text-xs">
+                      {searchTerm
+                        ? <>No servers match <span className="font-mono">"{searchTerm}"</span> in {searchMode === "status" ? "Status" : "Custom Fields"}.</>
+                        : "Try adjusting your filters."}
+                    </p>
+                  </div>
                 </td>
               </tr>
             )}
