@@ -79,7 +79,7 @@ export function InventoryTable() {
         s.domain.toLowerCase().includes(q)
       );
     });
-  }, [servers, query, statusFilter, domainFilter, searchTerm, searchMode]);
+  }, [servers, query, statusFilter, domainFilter, searchTerm, filtersKey]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -249,7 +249,7 @@ export function InventoryTable() {
                         onSave={(v) => stageEdit(s.id, { serverName: v })}
                         display={(v) => (
                           <span className="font-mono font-semibold text-foreground">
-                            {searchMode === "custom" ? highlightMatch(v, searchTerm) : v}
+                            {customSearchActive ? highlightMatch(v, searchTerm) : v}
                           </span>
                         )}
                       />
@@ -260,7 +260,7 @@ export function InventoryTable() {
                         value={s.ipAddress}
                         onSave={(v) => stageEdit(s.id, { ipAddress: v })}
                         display={(v) => (
-                          <span>{searchMode === "custom" ? highlightMatch(v, searchTerm) : v}</span>
+                          <span>{customSearchActive ? highlightMatch(v, searchTerm) : v}</span>
                         )}
                       />
                     </td>
@@ -281,7 +281,7 @@ export function InventoryTable() {
                     <td className="px-3 py-3"><PatchedBadge patched={s.isPatched} /></td>
                     <td className="px-3 py-3 text-xs text-muted-foreground max-w-[180px] truncate">{s.location}</td>
                     <td className="px-3 py-3 text-xs font-mono text-muted-foreground">
-                      {searchMode === "custom" ? highlightMatch(s.domain, searchTerm) : s.domain}
+                      {customSearchActive ? highlightMatch(s.domain, searchTerm) : s.domain}
                     </td>
                     <td className="px-3 py-3"><PriorityBadge priority={s.priority} /></td>
                     <td className="px-3 py-3">
@@ -319,7 +319,7 @@ export function InventoryTable() {
                     <p className="text-sm font-medium text-foreground">No results found</p>
                     <p className="text-xs">
                       {searchTerm
-                        ? <>No servers match <span className="font-mono">"{searchTerm}"</span> in {searchMode === "status" ? "Status" : "Custom Fields"}.</>
+                        ? <>No servers match <span className="font-mono">"{searchTerm}"</span> in the selected scope{searchFilters.length > 1 ? "s" : ""}.</>
                         : "Try adjusting your filters."}
                     </p>
                   </div>
