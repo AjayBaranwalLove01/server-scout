@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -60,8 +60,9 @@ export function InventoryTable() {
     if (!patch) return;
     updateServer(id, patch);
     setPendingEdits((p) => {
-      const { [id]: _, ...rest } = p;
-      return rest;
+      const next = { ...p };
+      delete next[id];
+      return next;
     });
     toast.success(`Saved changes to ${servers.find((s) => s.id === id)?.serverName}`);
   };
@@ -193,9 +194,8 @@ export function InventoryTable() {
               const isExpanded = expanded === s.id;
               const isDirty = !!pendingEdits[s.id];
               return (
-                <>
+                <Fragment key={s.id}>
                   <tr
-                    key={s.id}
                     className={cn(
                       "border-t border-border hover:bg-muted/30 transition-colors",
                       isDirty && "bg-warning/5",
@@ -268,7 +268,7 @@ export function InventoryTable() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
             {pageRows.length === 0 && (
