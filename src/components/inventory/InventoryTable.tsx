@@ -304,8 +304,16 @@ export function InventoryTable() {
             })}
             {pageRows.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-3 py-12 text-center text-muted-foreground text-sm">
-                  No servers match your filters.
+                <td colSpan={10} className="px-3 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Search className="w-8 h-8 opacity-40" />
+                    <p className="text-sm font-medium text-foreground">No results found</p>
+                    <p className="text-xs">
+                      {searchTerm
+                        ? <>No servers match <span className="font-mono">"{searchTerm}"</span> in {searchMode === "status" ? "Status" : "Custom Fields"}.</>
+                        : "Try adjusting your filters."}
+                    </p>
+                  </div>
                 </td>
               </tr>
             )}
