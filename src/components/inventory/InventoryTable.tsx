@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 const PAGE_SIZE = 6;
 
 export function InventoryTable() {
-  const { servers, updateServer, searchTerm, searchMode } = useServerStore();
+  const { servers, updateServer, searchTerm, searchFilters } = useServerStore();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [domainFilter, setDomainFilter] = useState<string>("All");
@@ -33,27 +33,36 @@ export function InventoryTable() {
     [servers]
   );
 
+  const filtersKey = searchFilters.join(",");
   // Reset to page 1 whenever the global search changes
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, searchMode]);
+  }, [searchTerm, filtersKey]);
 
   const matchesGlobalSearch = (s: Server): boolean => {
     const q = searchTerm.trim().toLowerCase();
     if (!q) return true;
-    if (searchMode === "status") {
+    const checks: boolean[] = [];
+    if (searchFilters.includes("status")) {
       const haystacks = [
         s.status.toLowerCase(),
         s.isPatched === "Yes" ? "patched" : "unpatched",
       ];
-      return haystacks.some((h) => h.includes(q));
+      checks.push(haystacks.some((h) => h.includes(q)));
     }
-    const fields = [
-      s.serverName, s.domain, s.serialNumber, s.patchContact,
-      s.ipAddress, s.internetFacing, s.sociAsset, s.essential8,
-    ];
-    return fields.some((f) => String(f ?? "").toLowerCase().includes(q));
+    if (searchFilters.includes("custom")) {
+      const fields = [
+        s.serverName, s.domain, s.serialNumber, s.patchContact,
+        s.ipAddress, s.internetFacing, s.sociAsset, s.essential8,
+      ];
+      checks.push(fields.some((f) => String(f ?? "").toLowerCase().includes(q)));
+    }
+    // OR logic across enabled scopes
+    return checks.some(Boolean);
   };
+
+  const customSearchActive =
+    !!searchTerm.trim() && searchFilters.includes("custom");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -70,7 +79,7 @@ export function InventoryTable() {
         s.domain.toLowerCase().includes(q)
       );
     });
-  }, [servers, query, statusFilter, domainFilter, searchTerm, searchMode]);
+  }, [servers, query, statusFilter, domainFilter, searchTerm, filtersKey]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -240,7 +249,7 @@ export function InventoryTable() {
                         onSave={(v) => stageEdit(s.id, { serverName: v })}
                         display={(v) => (
                           <span className="font-mono font-semibold text-foreground">
-                            {searchMode === "custom" ? highlightMatch(v, searchTerm) : v}
+                            {customSearchActive ? highlightMatch(v, searchTerm) : v}
                           </span>
                         )}
                       />
@@ -251,7 +260,7 @@ export function InventoryTable() {
                         value={s.ipAddress}
                         onSave={(v) => stageEdit(s.id, { ipAddress: v })}
                         display={(v) => (
-                          <span>{searchMode === "custom" ? highlightMatch(v, searchTerm) : v}</span>
+                          <span>{customSearchActive ? highlightMatch(v, searchTerm) : v}</span>
                         )}
                       />
                     </td>
@@ -272,7 +281,7 @@ export function InventoryTable() {
                     <td className="px-3 py-3"><PatchedBadge patched={s.isPatched} /></td>
                     <td className="px-3 py-3 text-xs text-muted-foreground max-w-[180px] truncate">{s.location}</td>
                     <td className="px-3 py-3 text-xs font-mono text-muted-foreground">
-                      {searchMode === "custom" ? highlightMatch(s.domain, searchTerm) : s.domain}
+                      {customSearchActive ? highlightMatch(s.domain, searchTerm) : s.domain}
                     </td>
                     <td className="px-3 py-3"><PriorityBadge priority={s.priority} /></td>
                     <td className="px-3 py-3">
@@ -310,7 +319,7 @@ export function InventoryTable() {
                     <p className="text-sm font-medium text-foreground">No results found</p>
                     <p className="text-xs">
                       {searchTerm
-                        ? <>No servers match <span className="font-mono">"{searchTerm}"</span> in {searchMode === "status" ? "Status" : "Custom Fields"}.</>
+                        ? <>No servers match <span className="font-mono">"{searchTerm}"</span> in the selected scope{searchFilters.length > 1 ? "s" : ""}.</>
                         : "Try adjusting your filters."}
                     </p>
                   </div>
