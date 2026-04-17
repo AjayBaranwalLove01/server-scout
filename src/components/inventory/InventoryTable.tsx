@@ -239,7 +239,9 @@ export function InventoryTable() {
                         value={s.serverName}
                         onSave={(v) => stageEdit(s.id, { serverName: v })}
                         display={(v) => (
-                          <span className="font-mono font-semibold text-foreground">{v}</span>
+                          <span className="font-mono font-semibold text-foreground">
+                            {searchMode === "custom" ? highlightMatch(v, searchTerm) : v}
+                          </span>
                         )}
                       />
                       <p className="text-[11px] text-muted-foreground mt-0.5">{s.model}</p>
@@ -248,6 +250,9 @@ export function InventoryTable() {
                       <InlineText
                         value={s.ipAddress}
                         onSave={(v) => stageEdit(s.id, { ipAddress: v })}
+                        display={(v) => (
+                          <span>{searchMode === "custom" ? highlightMatch(v, searchTerm) : v}</span>
+                        )}
                       />
                     </td>
                     <td className="px-3 py-3 text-xs text-muted-foreground">{s.os}</td>
@@ -266,7 +271,9 @@ export function InventoryTable() {
                     </td>
                     <td className="px-3 py-3"><PatchedBadge patched={s.isPatched} /></td>
                     <td className="px-3 py-3 text-xs text-muted-foreground max-w-[180px] truncate">{s.location}</td>
-                    <td className="px-3 py-3 text-xs font-mono text-muted-foreground">{s.domain}</td>
+                    <td className="px-3 py-3 text-xs font-mono text-muted-foreground">
+                      {searchMode === "custom" ? highlightMatch(s.domain, searchTerm) : s.domain}
+                    </td>
                     <td className="px-3 py-3"><PriorityBadge priority={s.priority} /></td>
                     <td className="px-3 py-3">
                       <button
