@@ -369,13 +369,22 @@ export function InventoryTable() {
                     </td>
                     <td className="px-3 py-3"><PriorityBadge priority={s.priority} /></td>
                     <td className="px-3 py-3">
-                      <button
-                        onClick={() => saveRow(s.id)}
-                        disabled={!isDirty}
-                        className="inline-flex items-center gap-1 h-7 px-2.5 text-xs rounded-md bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-30 disabled:cursor-not-allowed font-medium transition-colors"
-                      >
-                        <Save className="w-3 h-3" /> Save
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => saveRow(s.id)}
+                          disabled={!isDirty || savingIds.has(s.id)}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 text-xs rounded-md bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-30 disabled:cursor-not-allowed font-medium transition-colors"
+                        >
+                          {savingIds.has(s.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(s)}
+                          title="Delete server"
+                          className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   {isExpanded && (
