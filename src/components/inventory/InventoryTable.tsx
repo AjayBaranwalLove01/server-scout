@@ -117,32 +117,81 @@ export function InventoryTable() {
     setPendingEdits((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
   };
 
-  const saveRow = (id: string) => {
-    const patch = pendingEdits[id];
-    if (!patch) return;
-    updateServer(id, patch);
-    setPendingEdits((p) => {
-      const next = { ...p };
-      delete next[id];
+  const markSaving = (id: string, on: boolean) =>
+    setSavingIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
       return next;
     });
-    toast.success(`Saved changes to ${servers.find((s) => s.id === id)?.serverName}`);
+
+  const saveRow = async (id: string) => {
+    const patch = pendingEdits[id];
+    if (!patch) return;
+    markSaving(id, true);
+    try {
+      await updateServer(id, patch);
+      setPendingEdits((p) => {
+        const next = { ...p };
+        delete next[id];
+        return next;
+      });
+      toast.success(`Saved changes to ${servers.find((s) => s.id === id)?.serverName}`);
+    } catch (e: any) {
+      toast.error(`Save failed: ${e.message ?? e}`);
+    } finally {
+      markSaving(id, false);
+    }
   };
 
-  const saveAll = () => {
+  const saveAll = async () => {
     const ids = Object.keys(pendingEdits);
     if (!ids.length) {
       toast.info("No pending changes");
       return;
     }
-    ids.forEach((id) => updateServer(id, pendingEdits[id]));
-    setPendingEdits({});
-    toast.success(`Saved ${ids.length} server${ids.length === 1 ? "" : "s"}`);
+    try {
+      await Promise.all(ids.map((id) => updateServer(id, pendingEdits[id])));
+      setPendingEdits({});
+      toast.success(`Saved ${ids.length} server${ids.length === 1 ? "" : "s"}`);
+    } catch (e: any) {
+      toast.error(`Save failed: ${e.message ?? e}`);
+    }
   };
 
   const discardAll = () => {
     setPendingEdits({});
     toast.message("Discarded pending changes");
+  };
+
+  const handleCreate = async () => {
+    try {
+      const created = await createServer();
+      if (created) {
+        setExpanded(created.id);
+        setPage(1);
+        toast.success("New server added — edit details below");
+      }
+    } catch (e: any) {
+      toast.error(`Create failed: ${e.message ?? e}`);
+    }
+  };
+
+  const handleDelete = async (srv: Server) => {
+    try {
+      await deleteServer(srv.id);
+      setPendingEdits((p) => {
+        const next = { ...p };
+        delete next[srv.id];
+        return next;
+      });
+      if (expanded === srv.id) setExpanded(null);
+      toast.success(`Deleted ${srv.serverName}`);
+    } catch (e: any) {
+      toast.error(`Delete failed: ${e.message ?? e}`);
+    } finally {
+      setConfirmDelete(null);
+    }
   };
 
   const exportCsv = () => {
