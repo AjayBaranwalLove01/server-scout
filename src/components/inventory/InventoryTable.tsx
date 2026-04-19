@@ -408,13 +408,22 @@ export function InventoryTable() {
               <tr>
                 <td colSpan={10} className="px-3 py-16 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Search className="w-8 h-8 opacity-40" />
-                    <p className="text-sm font-medium text-foreground">No results found</p>
-                    <p className="text-xs">
-                      {searchTerm
-                        ? <>No servers match <span className="font-mono">"{searchTerm}"</span> in the selected scope{searchFilters.length > 1 ? "s" : ""}.</>
-                        : "Try adjusting your filters."}
-                    </p>
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-6 h-6 animate-spin opacity-60" />
+                        <p className="text-sm font-medium text-foreground">Loading servers…</p>
+                      </>
+                    ) : (
+                      <>
+                        <Search className="w-8 h-8 opacity-40" />
+                        <p className="text-sm font-medium text-foreground">No results found</p>
+                        <p className="text-xs">
+                          {searchTerm
+                            ? <>No servers match <span className="font-mono">"{searchTerm}"</span> in the selected scope{searchFilters.length > 1 ? "s" : ""}.</>
+                            : "Try adjusting your filters or add a new server."}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
