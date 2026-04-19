@@ -276,6 +276,12 @@ export function InventoryTable() {
             <Save className="w-3.5 h-3.5" /> Save all
           </button>
           <button
+            onClick={handleCreate}
+            className="inline-flex items-center gap-1.5 h-9 px-3 text-sm rounded-md bg-accent text-accent-foreground hover:bg-accent/90 font-medium transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> New server
+          </button>
+          <button
             onClick={exportCsv}
             className="inline-flex items-center gap-1.5 h-9 px-3 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary-hover transition-colors"
           >
