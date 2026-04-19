@@ -14,7 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      servers: {
+        Row: {
+          affected_groups: Json
+          alive: string
+          backup_details_url: string
+          build_date: string
+          build_engineer: string
+          business_function: string
+          created_at: string
+          day: string
+          design_engineer: string
+          domain: string
+          essential8: string
+          id: string
+          ilo: string
+          internet_facing: string
+          ip_address: string
+          is_patched: string
+          last_collated: string
+          location: string
+          maintenance_comment: string
+          model: string
+          network: string
+          notes: string
+          os: string
+          os_support_ends: string
+          patch_category: string
+          patch_contact: string
+          patch_notes: string
+          patch_sequence: string
+          pci_asset: string
+          primary_group_id: string | null
+          priority: string
+          serial_number: string
+          server_description: string
+          server_name: string
+          soci_asset: string
+          software_installed_url: string
+          status: string
+          time: string
+          updated_at: string
+        }
+        Insert: {
+          affected_groups?: Json
+          alive?: string
+          backup_details_url?: string
+          build_date?: string
+          build_engineer?: string
+          business_function?: string
+          created_at?: string
+          day?: string
+          design_engineer?: string
+          domain?: string
+          essential8?: string
+          id: string
+          ilo?: string
+          internet_facing?: string
+          ip_address?: string
+          is_patched?: string
+          last_collated?: string
+          location?: string
+          maintenance_comment?: string
+          model?: string
+          network?: string
+          notes?: string
+          os?: string
+          os_support_ends?: string
+          patch_category?: string
+          patch_contact?: string
+          patch_notes?: string
+          patch_sequence?: string
+          pci_asset?: string
+          primary_group_id?: string | null
+          priority?: string
+          serial_number?: string
+          server_description?: string
+          server_name: string
+          soci_asset?: string
+          software_installed_url?: string
+          status?: string
+          time?: string
+          updated_at?: string
+        }
+        Update: {
+          affected_groups?: Json
+          alive?: string
+          backup_details_url?: string
+          build_date?: string
+          build_engineer?: string
+          business_function?: string
+          created_at?: string
+          day?: string
+          design_engineer?: string
+          domain?: string
+          essential8?: string
+          id?: string
+          ilo?: string
+          internet_facing?: string
+          ip_address?: string
+          is_patched?: string
+          last_collated?: string
+          location?: string
+          maintenance_comment?: string
+          model?: string
+          network?: string
+          notes?: string
+          os?: string
+          os_support_ends?: string
+          patch_category?: string
+          patch_contact?: string
+          patch_notes?: string
+          patch_sequence?: string
+          pci_asset?: string
+          primary_group_id?: string | null
+          priority?: string
+          serial_number?: string
+          server_description?: string
+          server_name?: string
+          soci_asset?: string
+          software_installed_url?: string
+          status?: string
+          time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      support_groups: {
+        Row: {
+          created_at: string
+          id: string
+          manager: string
+          members: string[]
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          manager: string
+          members?: string[]
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          manager?: string
+          members?: string[]
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

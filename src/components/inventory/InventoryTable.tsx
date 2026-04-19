@@ -7,6 +7,9 @@ import {
   Search,
   Save,
   RotateCcw,
+  Plus,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { useServerStore } from "@/store/serverStore";
 import type { Server } from "@/types/server";
@@ -16,17 +19,43 @@ import { ServerDetailPanel } from "./ServerDetailPanel";
 import { highlightMatch } from "@/lib/highlight";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const PAGE_SIZE = 6;
 
 export function InventoryTable() {
-  const { servers, updateServer, searchTerm, searchFilters } = useServerStore();
+  const {
+    servers,
+    updateServer,
+    createServer,
+    deleteServer,
+    fetchAll,
+    loading,
+    loaded,
+    searchTerm,
+    searchFilters,
+  } = useServerStore();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [domainFilter, setDomainFilter] = useState<string>("All");
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pendingEdits, setPendingEdits] = useState<Record<string, Partial<Server>>>({});
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState<Server | null>(null);
+
+  useEffect(() => {
+    if (!loaded) fetchAll();
+  }, [loaded, fetchAll]);
 
   const domains = useMemo(
     () => Array.from(new Set(servers.map((s) => s.domain))),
@@ -88,32 +117,81 @@ export function InventoryTable() {
     setPendingEdits((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
   };
 
-  const saveRow = (id: string) => {
-    const patch = pendingEdits[id];
-    if (!patch) return;
-    updateServer(id, patch);
-    setPendingEdits((p) => {
-      const next = { ...p };
-      delete next[id];
+  const markSaving = (id: string, on: boolean) =>
+    setSavingIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
       return next;
     });
-    toast.success(`Saved changes to ${servers.find((s) => s.id === id)?.serverName}`);
+
+  const saveRow = async (id: string) => {
+    const patch = pendingEdits[id];
+    if (!patch) return;
+    markSaving(id, true);
+    try {
+      await updateServer(id, patch);
+      setPendingEdits((p) => {
+        const next = { ...p };
+        delete next[id];
+        return next;
+      });
+      toast.success(`Saved changes to ${servers.find((s) => s.id === id)?.serverName}`);
+    } catch (e: any) {
+      toast.error(`Save failed: ${e.message ?? e}`);
+    } finally {
+      markSaving(id, false);
+    }
   };
 
-  const saveAll = () => {
+  const saveAll = async () => {
     const ids = Object.keys(pendingEdits);
     if (!ids.length) {
       toast.info("No pending changes");
       return;
     }
-    ids.forEach((id) => updateServer(id, pendingEdits[id]));
-    setPendingEdits({});
-    toast.success(`Saved ${ids.length} server${ids.length === 1 ? "" : "s"}`);
+    try {
+      await Promise.all(ids.map((id) => updateServer(id, pendingEdits[id])));
+      setPendingEdits({});
+      toast.success(`Saved ${ids.length} server${ids.length === 1 ? "" : "s"}`);
+    } catch (e: any) {
+      toast.error(`Save failed: ${e.message ?? e}`);
+    }
   };
 
   const discardAll = () => {
     setPendingEdits({});
     toast.message("Discarded pending changes");
+  };
+
+  const handleCreate = async () => {
+    try {
+      const created = await createServer();
+      if (created) {
+        setExpanded(created.id);
+        setPage(1);
+        toast.success("New server added — edit details below");
+      }
+    } catch (e: any) {
+      toast.error(`Create failed: ${e.message ?? e}`);
+    }
+  };
+
+  const handleDelete = async (srv: Server) => {
+    try {
+      await deleteServer(srv.id);
+      setPendingEdits((p) => {
+        const next = { ...p };
+        delete next[srv.id];
+        return next;
+      });
+      if (expanded === srv.id) setExpanded(null);
+      toast.success(`Deleted ${srv.serverName}`);
+    } catch (e: any) {
+      toast.error(`Delete failed: ${e.message ?? e}`);
+    } finally {
+      setConfirmDelete(null);
+    }
   };
 
   const exportCsv = () => {
@@ -196,6 +274,12 @@ export function InventoryTable() {
             className="inline-flex items-center gap-1.5 h-9 px-3 text-sm rounded-md bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors"
           >
             <Save className="w-3.5 h-3.5" /> Save all
+          </button>
+          <button
+            onClick={handleCreate}
+            className="inline-flex items-center gap-1.5 h-9 px-3 text-sm rounded-md bg-accent text-accent-foreground hover:bg-accent/90 font-medium transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> New server
           </button>
           <button
             onClick={exportCsv}
@@ -285,13 +369,22 @@ export function InventoryTable() {
                     </td>
                     <td className="px-3 py-3"><PriorityBadge priority={s.priority} /></td>
                     <td className="px-3 py-3">
-                      <button
-                        onClick={() => saveRow(s.id)}
-                        disabled={!isDirty}
-                        className="inline-flex items-center gap-1 h-7 px-2.5 text-xs rounded-md bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-30 disabled:cursor-not-allowed font-medium transition-colors"
-                      >
-                        <Save className="w-3 h-3" /> Save
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => saveRow(s.id)}
+                          disabled={!isDirty || savingIds.has(s.id)}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 text-xs rounded-md bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-30 disabled:cursor-not-allowed font-medium transition-colors"
+                        >
+                          {savingIds.has(s.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(s)}
+                          title="Delete server"
+                          className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   {isExpanded && (
@@ -315,13 +408,22 @@ export function InventoryTable() {
               <tr>
                 <td colSpan={10} className="px-3 py-16 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Search className="w-8 h-8 opacity-40" />
-                    <p className="text-sm font-medium text-foreground">No results found</p>
-                    <p className="text-xs">
-                      {searchTerm
-                        ? <>No servers match <span className="font-mono">"{searchTerm}"</span> in the selected scope{searchFilters.length > 1 ? "s" : ""}.</>
-                        : "Try adjusting your filters."}
-                    </p>
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-6 h-6 animate-spin opacity-60" />
+                        <p className="text-sm font-medium text-foreground">Loading servers…</p>
+                      </>
+                    ) : (
+                      <>
+                        <Search className="w-8 h-8 opacity-40" />
+                        <p className="text-sm font-medium text-foreground">No results found</p>
+                        <p className="text-xs">
+                          {searchTerm
+                            ? <>No servers match <span className="font-mono">"{searchTerm}"</span> in the selected scope{searchFilters.length > 1 ? "s" : ""}.</>
+                            : "Try adjusting your filters or add a new server."}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -367,6 +469,28 @@ export function InventoryTable() {
           </button>
         </div>
       </div>
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this server?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes{" "}
+              <span className="font-mono font-semibold">{confirmDelete?.serverName}</span>{" "}
+              from the inventory. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmDelete && handleDelete(confirmDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
