@@ -7,6 +7,9 @@ import {
   Search,
   Save,
   RotateCcw,
+  Plus,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { useServerStore } from "@/store/serverStore";
 import type { Server } from "@/types/server";
@@ -16,17 +19,43 @@ import { ServerDetailPanel } from "./ServerDetailPanel";
 import { highlightMatch } from "@/lib/highlight";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const PAGE_SIZE = 6;
 
 export function InventoryTable() {
-  const { servers, updateServer, searchTerm, searchFilters } = useServerStore();
+  const {
+    servers,
+    updateServer,
+    createServer,
+    deleteServer,
+    fetchAll,
+    loading,
+    loaded,
+    searchTerm,
+    searchFilters,
+  } = useServerStore();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [domainFilter, setDomainFilter] = useState<string>("All");
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pendingEdits, setPendingEdits] = useState<Record<string, Partial<Server>>>({});
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState<Server | null>(null);
+
+  useEffect(() => {
+    if (!loaded) fetchAll();
+  }, [loaded, fetchAll]);
 
   const domains = useMemo(
     () => Array.from(new Set(servers.map((s) => s.domain))),
