@@ -77,7 +77,7 @@ export const useServerStore = create<ServerStore>((set, get) => ({
     const row = patchToRow(patch);
     const { data, error } = await supabase
       .from("servers")
-      .update(row)
+      .update(row as never)
       .eq("id", id)
       .select()
       .single();
@@ -104,7 +104,7 @@ export const useServerStore = create<ServerStore>((set, get) => ({
     const row = { id, ...patchToRow(draft) };
     const { data, error } = await supabase
       .from("servers")
-      .insert(row)
+      .insert(row as never)
       .select()
       .single();
     if (error) {
